@@ -5,52 +5,76 @@ using System.Net.Http.Json;
 
 namespace QuizApp;
 
-public class QuizApiClient(HttpClient httpClient) : IDisposable
+public class QuizApiClient
 {
+    private HttpClient _httpClient;
 
-    public static QuizApiClient Create()
+    public QuizApiClient()
     {
-        var httpClient = new HttpClient
-        {
-            BaseAddress = new Uri("https://opentdb.com/"),
-            Timeout = TimeSpan.FromSeconds(30)
-        };
-
-        return new QuizApiClient(httpClient);
+        _httpClient = new HttpClient();
+        _httpClient.BaseAddress = new Uri("https://opentdb.com/");
     }
 
-    public void Dispose() => httpClient.Dispose();
+    // min enkla metod så andra klasser kan skapa klienten med QuizApiClient.Create()
+    public static QuizApiClient Create()
+    {
+        return new QuizApiClient();
+    }
 
     public async Task<List<QuizQuestion>> GetQuizQuestionsAsync()
     {
-        var url = "api.php?amount=5&difficulty=easy&type=multiple";
+        // Standard till 10 frågor
+        return await GetQuizQuestionsAsync(2);
+    }
 
-        var response = await httpClient.GetAsync(url);
+    //  metod som tar antal frågor som parameter
+    public async Task<List<QuizQuestion>> GetQuizQuestionsAsync(int amount)
+    {
+        // min nya inställning med angivet antal
+        string url = $"api.php?amount={amount}&category=15&difficulty=easy";
 
-        response.EnsureSuccessStatusCode();
+        var response = await _httpClient.GetAsync(url);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new Exception("Kunde inte hämta frågor från API.");
+        }
 
         var quizResult = await response.Content.ReadFromJsonAsync<OpenTriviaQuizResponse>();
 
-        if (quizResult is null || quizResult.ResponseCode != 0)
+        if (quizResult == null || quizResult.ResponseCode != 0)
         {
-            throw new InvalidOperationException("Failed to fetch quiz questions from the API.");
+            throw new Exception("Fel från API.");
         }
 
-        var result = new List<QuizQuestion>();
+        var questions = new List<QuizQuestion>();
 
         foreach (var item in quizResult.Results)
         {
-            result.Add(new QuizQuestion
-            (
-                WebUtility.HtmlDecode(item.Category),
-                WebUtility.HtmlDecode(item.Type),
-                WebUtility.HtmlDecode(item.Difficulty),
-                WebUtility.HtmlDecode(item.Question),
-                WebUtility.HtmlDecode(item.CorrectAnswer),
-                [.. item.IncorrectAnswers.Select(o => WebUtility.HtmlDecode(o))]
-            ));
+            var incorrectAnswers = new List<string>();
+
+            foreach (var answer in item.IncorrectAnswers)
+            {
+                incorrectAnswers.Add(CleanText(answer));
+            }
+
+            var question = new QuizQuestion(
+                CleanText(item.Category),
+                CleanText(item.Type),
+                CleanText(item.Difficulty),
+                CleanText(item.Question),
+                CleanText(item.CorrectAnswer),
+                incorrectAnswers
+            );
+
+            questions.Add(question);
         }
 
-        return result;
+        return questions;
+    }
+
+    private string CleanText(string text)
+    {
+        return System.Net.WebUtility.HtmlDecode(text);
     }
 }
