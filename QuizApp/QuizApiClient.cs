@@ -23,13 +23,23 @@ public class QuizApiClient
 
     public async Task<List<QuizQuestion>> GetQuizQuestionsAsync()
     {
-        // Standard till 10 frågor
+        // Standard: 2 frågor
         return await GetQuizQuestionsAsync(2);
     }
 
-    //  metod som tar antal frågor som parameter
+    // metod som tar antal frågor som parameter
     public async Task<List<QuizQuestion>> GetQuizQuestionsAsync(int amount)
     {
+        // säkerställ att amount är mellan 2 och 3
+        if (amount < 2)
+        {
+            amount = 2;
+        }
+        else if (amount > 3)
+        {
+            amount = 3;
+        }
+
         // min nya inställning med angivet antal
         string url = $"api.php?amount={amount}&category=15&difficulty=easy";
 

@@ -103,4 +103,58 @@ namespace QuizApp
             btnNext.Enabled = false;
         }
 
- 
+        private void OptionButton_Click(object? sender, EventArgs e)
+        {
+            if (sender is not Button btn) return;
+            if (btn.Tag is not bool isCorrect) return;
+
+            // stänger av alla mina alternativ för frågan
+            foreach (var b in _optionButtons) b.Enabled = false;
+
+            if (isCorrect)
+            {
+                // om frågan är rätt så höjer jag min score och uppdaterar texten
+                _score++;
+                lblScore.Text = $"Score: {_score}";
+                MessageBox.Show("Correct!");
+            }
+            else
+            {
+                MessageBox.Show("Incorrect. The correct answer was: " + _questions[_currentIndex].CorrectAnswer);
+            }
+
+            btnNext.Enabled = true;
+        }
+
+        private void BtnNext_Click(object? sender, EventArgs e)
+        {
+            _currentIndex++;
+            if (_currentIndex < _questions.Count)
+            {
+                DisplayCurrentQuestion();
+            }
+            else
+            {
+                ShowResultsAndSave();
+            }
+        }
+
+        private void ShowResultsAndSave()
+        {
+            MessageBox.Show($"Quiz finished. Your score: {_score} / {_questions.Count}");
+
+            try
+            {
+                var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "quiz_results.txt");
+                var text = $"{DateTime.Now:u} - Score: {_score} / {_questions.Count}\n";
+                File.AppendAllText(path, text);
+            }
+            catch
+            {
+                // ignorera att skriva i filen för så programmet det håller sig simpelt
+            }
+
+            button1.Enabled = true;
+        }
+    }
+}
